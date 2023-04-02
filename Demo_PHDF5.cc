@@ -4,11 +4,11 @@
 
 #define FILENAME "TestFile.h5"
 
-#define H5_CHECK_ERROR(h5call)                        \
+#define H5_CHECK_ERROR(H5call)                        \
 do {                                                  \
-    const int err = h5call;                           \
+    const int err = H5call;                           \
     if (err < 0) {                                    \
-        std::cout << "HDF5 call '" << #h5call         \
+        std::cout << "HDF5 call '" << #H5call         \
                   << "' returned error code " << err  \
                   << " (line " << __LINE__ << ")"     \
                   << std::endl;                       \
