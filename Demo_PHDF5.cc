@@ -4,7 +4,7 @@
 
 #define FILENAME "TestFile.h5"
 
-#define H5_CHECK_ERROR(h5call)                               \
+#define H5_CHECK_ERROR(h5call)                        \
 do {                                                  \
     const int err = h5call;                           \
     if (err < 0) {                                    \
