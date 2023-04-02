@@ -10,6 +10,7 @@ do {                                                  \
     if (err < 0) {                                    \
         std::cout << "HDF5 call '" << #h5call         \
                   << "' returned error code " << err  \
+                  << " (line " << __LINE__ << ")"     \
                   << std::endl;                       \
     }                                                 \
 } while (0)
