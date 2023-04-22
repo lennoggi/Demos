@@ -1,4 +1,5 @@
 #include <cassert>
+#include <iostream>
 #include <mpi.h>
 #include <hdf5.h>
 
