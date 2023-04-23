@@ -2,16 +2,26 @@
 #include <iostream>
 #include <array>
 #include <string>
+#include <chrono>
+
 #include <mpi.h>
 #include <hdf5.h>
+
 #include "H5_mpio.hh"
 #include "Macros.hh"
 
 using namespace std;
+using namespace std::chrono;
+
 
 #define FILENAME "TestFile.h5"
-#define DSETNAME "TestDset"
-#define SIZE     10
+#define DSETNAME "TestDataset"
+
+#define COL_SIZE 1000000
+#define CHUNKED  true
+
+#define COMPRESS          true
+#define COMPRESSION_LEVEL 9
 
 
 
@@ -62,6 +72,9 @@ int main(int argc, char **argv) {
     // Initialize MPI
     CHECK_ERROR(MPI_Init(&argc, &argv));
 
+    // Record the initial time
+    const auto begin = high_resolution_clock::now();
+
     // Get the total number of ranks and the ID of the current rank
     int nranks, rankid;
     CHECK_ERROR(MPI_Comm_size(MPI_COMM_WORLD, &nranks));
@@ -79,16 +92,16 @@ int main(int argc, char **argv) {
     assert(file_create_id >= 0);
 
 
-    /* Create a file dataspace describing a 2D dataset with nranks rows and SIZE
-     * columns                                                                  */
-    const hsize_t fdims[2]  = {nranks, SIZE};
+    /* Create a file dataspace describing a 2D dataset with COL_SIZE rows and
+     * nranks columns                                                           */
+    const hsize_t fdims[2]  = {COL_SIZE, nranks};
     const auto    fspace_id = H5Screate_simple(2, fdims, nullptr);
     assert(fspace_id >= 0);
 
-    /* Each MPI rank will write a 1D array of size SIZE in the rankid-th column
+    /* Each MPI rank will write a 1D array of size COL_SIZE in the rankid-th column
      * of the dataset. Therefore, the memory dataspace -- local to each MPI
-     * rank -- is 1D and has SIZE elements.                                     */
-    const hsize_t mdims     = SIZE;
+     * rank -- is 1D and has COL_SIZE elements.                                 */
+    const hsize_t mdims     = COL_SIZE;
     const auto    mspace_id = H5Screate_simple(1, &mdims, nullptr);
     assert(mspace_id >= 0);
 
@@ -99,9 +112,9 @@ int main(int argc, char **argv) {
      * NOTE: fblock and fstride could also be left as nullptr, as that would
      *       default to 1 in each direction (i.e. contiguous dataset with block
      *       size equal to 1)                                                   */
-    const hsize_t fstart[2]  = {rankid, 0};
+    const hsize_t fstart[2]  = {0, rankid};
     const hsize_t fstride[2] = {1, 1};
-    const hsize_t fcount[2]  = {1, SIZE};
+    const hsize_t fcount[2]  = {COL_SIZE, 1};
     const hsize_t fblock[2]  = {1, 1};
 
     CHECK_ERROR(H5Sselect_hyperslab(fspace_id, H5S_SELECT_SET,
@@ -112,19 +125,54 @@ int main(int argc, char **argv) {
      * rank -- it's just the full memory dataspace                              */
     const hsize_t mstart  = 0;
     const hsize_t mstride = 1;
-    const hsize_t mcount  = SIZE;
+    const hsize_t mcount  = COL_SIZE;
     const hsize_t mblock  = 1;
 
     CHECK_ERROR(H5Sselect_hyperslab(mspace_id, H5S_SELECT_SET,
                                    &mstart, &mstride, &mcount, &mblock));
 
 
-    /* Create the dataset using the default link creation, dataset creation and
-     * dataset access property list identifiers
+    /* Create a dataset creation property list. If desired, make the dataset
+     * chunked and set the chunk size to the size of a column in the dataset,
+     * i.e. exactly to what the current MPI is going to write to disk; this
+     * maximizes efficiency when writing to the dataset. It does so when reading
+     * from it as well, provided that the reading is performed column by column.*/
+    const auto dcpl_id = H5Pcreate(H5P_DATASET_CREATE);
+    assert(dcpl_id >= 0);
+
+    static_assert(CHUNKED or not CHUNKED);
+    #if (CHUNKED)
+    INFO("Chunking enabled");
+    CHECK_ERROR(H5Pset_layout(dcpl_id, H5D_CHUNKED));
+    const hsize_t chunk_dims[2] = {COL_SIZE, 1};  // Same as to fcount above
+    CHECK_ERROR(H5Pset_chunk(dcpl_id, 2, chunk_dims));
+    #else
+    INFO("Chunking disabled");
+    CHECK_ERROR(H5Pset_layout(dcpl_id, H5D_CONTIGUOUS));
+    #endif
+
+
+    /* If desired, compress each chunk up to the selected level: 0 (no
+     * compression, fastest) to 9 (maximum compression, slowest)                */
+    static_assert(COMPRESS or not COMPRESS);
+
+    #if (COMPRESS)
+    static_assert(CHUNKED);  // Can't compress non-chunked datasets!
+    static_assert(COMPRESSION_LEVEL >= 0 and COMPRESSION_LEVEL < 10);
+    CHECK_ERROR(H5Pset_deflate(dcpl_id, COMPRESSION_LEVEL));
+    INFO("Compression enabled with compression level " << COMPRESSION_LEVEL);
+    #else
+    INFO("Compression disabled");
+    #endif
+
+
+    /* Create the dataset using the default link creation property list, the
+     * dataset creation property list with chunking and compression, and the
+     * default dataset access property list
      * NOTE: all MPI ranks must create the dataset                              */
     const auto dset_create_id = H5Dcreate(file_create_id, DSETNAME,
                                           H5T_NATIVE_INT, fspace_id,
-                                          H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+                                          H5P_DEFAULT, dcpl_id, H5P_DEFAULT);
     assert(dset_create_id >= 0);
 
 
@@ -135,9 +183,9 @@ int main(int argc, char **argv) {
 
 
     // Generate and write some data to the dataset
-    array<int, SIZE> data;
+    array<int, COL_SIZE> data;
 
-    for (int i = 0; i < SIZE; ++i) {
+    for (int i = 0; i < COL_SIZE; ++i) {
         data.at(i) = rankid + i;
     }
 
@@ -198,21 +246,26 @@ int main(int argc, char **argv) {
 
 
     // Print the dataset to screen
-    if (rankid == 0) {
+/*    if (rankid == 0) {
         cout << endl;
-        for (int i = 0; i < nranks; ++i) {
-            for (int j = 0; j < SIZE; ++j) {
-                cout << buffer[i*SIZE + j] << "\t";
+        for (int i = 0; i < dims[0];  ++i) {
+            for (int j = 0; j < dims[1]; ++j) {
+                cout << buffer[i*dims[1] + j] << "\t";
             }
             cout << endl;
         }
         cout << endl;
-    }
+    }*/
 
     delete [] buffer;
     buffer = nullptr;
     CHECK_ERROR(H5Pclose(dxpl_id));
 
+
+    // Record the final time and measure execution time
+    const auto end      = high_resolution_clock::now();
+    const auto duration = duration_cast<milliseconds>(end - begin);
+    INFO("Execution time: " << duration.count() << " ms");
 
     // Finalize MPI
     CHECK_ERROR(MPI_Finalize());
