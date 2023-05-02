@@ -85,6 +85,7 @@ int main(int argc, char **argv) {
     auto fapl_id = H5Pcreate(H5P_FILE_ACCESS);
     assert(fapl_id >= 0);
     CHECK_ERROR(H5Pset_fapl_mpio(fapl_id, MPI_COMM_WORLD, MPI_INFO_NULL));
+    CHECK_ERROR(H5Pset_all_coll_metadata_ops(fapl_id, true));
 
     // Collectively create a new file (overwrite if present)
     const auto file_create_id = H5Fcreate(FILENAME, H5F_ACC_TRUNC,
