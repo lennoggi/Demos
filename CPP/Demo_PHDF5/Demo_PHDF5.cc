@@ -17,7 +17,7 @@ using namespace std::chrono;
 #define FILENAME "TestFile.h5"
 #define DSETNAME "TestDataset"
 
-#define COL_SIZE 1000000
+#define COL_SIZE 10
 #define CHUNKED  true
 
 #define COMPRESS          true
