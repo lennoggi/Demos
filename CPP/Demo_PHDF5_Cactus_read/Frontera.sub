@@ -1,0 +1,13 @@
+#!/bin/bash
+#SBATCH -A PHY20010
+#SBATCH -p development
+#SBATCH -t 00:01:00
+#SBATCH -N 1 -n 4
+#SBATCH -J Demo_PHDF5_Cactus_read
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=lorenzo.ennoggi@gmail.com
+#SBATCH -o Demo_PHDF5_Cactus_read.out
+#SBATCH -e Demo_PHDF5_Cactus_read.err
+
+ml phdf5/1.12.2
+ibrun ./Demo_PHDF5_Cactus_read
