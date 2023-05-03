@@ -73,7 +73,7 @@ int main(int argc, char **argv) {
     CHECK_ERROR(H5Dread(allpars_dset_id, allpars_memtype_id,
                         H5S_ALL, H5S_ALL, H5P_DEFAULT, buffer));
     CHECK_ERROR(H5Tclose(allpars_memtype_id));
-    const string allpars_str(buffer);
+    const string allpars_str = buffer;
     delete [] buffer;
     cout << "All Parameters =\n" << allpars_str << endl;
 
