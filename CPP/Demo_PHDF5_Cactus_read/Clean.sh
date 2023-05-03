@@ -1,0 +1,2 @@
+set -e
+rm -f Demo_PHDF5_Cactus_read Demo_PHDF5_Cactus_read.out Demo_PHDF5_Cactus_read.err Demo_PHDF5_Cactus_read_serial
