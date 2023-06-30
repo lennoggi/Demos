@@ -26,7 +26,8 @@ int main(int argc, char **argv) {
 
     /* The new communicator can only be used if valid (i.e., it can only be used
      * by ranks 0 and 1 here)                                                   */
-    if (rankid == 0 or rankid == 1) {
+    //if (rankid == 0 or rankid == 1) {
+    if (newcomm != MPI_COMM_NULL) {
         int newcomm_size;
         MPI_Comm_size(newcomm, &newcomm_size);
         std::cout << "[Rank " << rankid << "] Size of the new communicator: " << newcomm_size << std::endl;
