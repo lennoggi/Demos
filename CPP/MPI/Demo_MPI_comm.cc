@@ -12,7 +12,9 @@ int main(int argc, char **argv) {
     MPI_Comm_group(MPI_COMM_WORLD, &world_group);
 
     /* MPI_Comm_create only returns a valid new communicator when called by a
-     * rank which is included in the new communicator (i.e., ranks 0 and 1 here)*/
+     * rank which is included in the new communicator (i.e., ranks 0 and 1 here)
+     * NOTE: *ALL* ranks must call MPI_Comm_create, even if then the resulting
+     *       communicator is invalid (MPI_COMM_NULL)                            */
     const int newcomm_ranks[2] = {0, 1};
     MPI_Group newgroup;
     MPI_Group_incl(world_group, 2, newcomm_ranks, &newgroup);
