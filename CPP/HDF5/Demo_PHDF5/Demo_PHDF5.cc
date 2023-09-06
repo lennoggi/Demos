@@ -2,6 +2,7 @@
 #include <iostream>
 #include <array>
 #include <string>
+#include <sstream>
 #include <chrono>
 
 #include <mpi.h>
@@ -29,23 +30,23 @@ using namespace std::chrono;
  * Routine to check whether an HDF5 property list generates a parallel operation
  * and whether any I/O optimizations are performed
  * =============================================================================*/
-void io_check(const hid_t &pl_id, const string &what) {
+void io_check(const hid_t &pl_id, const string &what, const int &rankid) {
     H5D_mpio_actual_io_mode_t actual_io_mode;
-    CHECK_ERROR(H5Pget_mpio_actual_io_mode(pl_id, &actual_io_mode));
+    CHECK_ERROR(rankid, H5Pget_mpio_actual_io_mode(pl_id, &actual_io_mode));
 
     H5D_mpio_actual_chunk_opt_mode_t actual_chunk_opt_mode;
-    CHECK_ERROR(H5Pget_mpio_actual_chunk_opt_mode(pl_id, &actual_chunk_opt_mode));
+    CHECK_ERROR(rankid, H5Pget_mpio_actual_chunk_opt_mode(pl_id, &actual_chunk_opt_mode));
 
     uint32_t no_collective_cause_local, no_collective_cause_global;
-    CHECK_ERROR(H5Pget_mpio_no_collective_cause(pl_id,
-                 &no_collective_cause_local, &no_collective_cause_global));
+    CHECK_ERROR(rankid, H5Pget_mpio_no_collective_cause(pl_id,
+                &no_collective_cause_local, &no_collective_cause_global));
 
     if (actual_io_mode             == H5D_MPIO_NO_COLLECTIVE         or
         actual_chunk_opt_mode      == H5D_MPIO_NO_CHUNK_OPTIMIZATION or
         no_collective_cause_local  != H5D_MPIO_COLLECTIVE            or
         no_collective_cause_global != H5D_MPIO_COLLECTIVE)
     {
-        WARNING("[" << what << "] Actual I/O mode, chunk optimization and local and global non-collective I/O causes: " <<
+        WARNING(rankid, "[" << what << "] Actual I/O mode, chunk optimization and local and global non-collective I/O causes: " <<
                  H5D_mpio_actual_io_mode_map.at(actual_io_mode)                    << ", " <<
                  H5D_mpio_actual_chunk_opt_mode_map.at(actual_chunk_opt_mode)      << ", " <<
                  H5Pget_mpio_no_collective_cause_map.at(no_collective_cause_local) << ", " <<
@@ -53,7 +54,7 @@ void io_check(const hid_t &pl_id, const string &what) {
     }
 
     else {
-        INFO("[" << what << "] Actual I/O mode, chunk optimization and local and global non-collective I/O causes: " <<
+        INFO(rankid, "[" << what << "] Actual I/O mode, chunk optimization and local and global non-collective I/O causes: " <<
               H5D_mpio_actual_io_mode_map.at(actual_io_mode)                    << ", " <<
               H5D_mpio_actual_chunk_opt_mode_map.at(actual_chunk_opt_mode)      << ", " <<
               H5Pget_mpio_no_collective_cause_map.at(no_collective_cause_local) << ", " <<
@@ -69,23 +70,37 @@ void io_check(const hid_t &pl_id, const string &what) {
  * Main routine
  * =============================================================================*/
 int main(int argc, char **argv) {
-    // Initialize MPI
-    CHECK_ERROR(MPI_Init(&argc, &argv));
+    // Can't call CHECK_ERROR() before knowing the rank ID                */
+    assert(MPI_Init(&argc, &argv) == MPI_SUCCESS);
 
-    // Record the initial time
     const auto begin = high_resolution_clock::now();
 
-    // Get the total number of ranks and the ID of the current rank
-    int nranks, rankid;
-    CHECK_ERROR(MPI_Comm_size(MPI_COMM_WORLD, &nranks));
-    CHECK_ERROR(MPI_Comm_rank(MPI_COMM_WORLD, &rankid));
+    int rankid, nranks;
+    assert(MPI_Comm_rank(MPI_COMM_WORLD, &rankid) == MPI_SUCCESS);
+    CHECK_ERROR(rankid, MPI_Comm_size(MPI_COMM_WORLD, &nranks));
+    assert(rankid < nranks);
+
+
+    // Redirect stdout and stderr to rank-specific files
+    ostringstream new_stdout_ss;
+    new_stdout_ss << "rank" << rankid << ".out";
+    FILE* new_stdout;
+    new_stdout = freopen(new_stdout_ss.str().c_str(), "w", stdout);
+    assert(new_stdout != nullptr);
+
+    ostringstream new_stderr_ss;
+    new_stderr_ss << "rank" << rankid << ".err";
+    FILE* new_stderr;
+    new_stderr = freopen(new_stderr_ss.str().c_str(), "w", stderr);
+    assert(new_stderr != nullptr);
+
 
     /* Create a file access property list with parallel I/O access using the
      * world communicator and the null MPI_Info object                          */
     auto fapl_id = H5Pcreate(H5P_FILE_ACCESS);
     assert(fapl_id >= 0);
-    CHECK_ERROR(H5Pset_fapl_mpio(fapl_id, MPI_COMM_WORLD, MPI_INFO_NULL));
-    CHECK_ERROR(H5Pset_all_coll_metadata_ops(fapl_id, true));
+    CHECK_ERROR(rankid, H5Pset_fapl_mpio(fapl_id, MPI_COMM_WORLD, MPI_INFO_NULL));
+    CHECK_ERROR(rankid, H5Pset_all_coll_metadata_ops(fapl_id, true));
 
     // Collectively create a new file (overwrite if present)
     const auto file_create_id = H5Fcreate(FILENAME, H5F_ACC_TRUNC,
@@ -118,8 +133,8 @@ int main(int argc, char **argv) {
     const hsize_t fcount[2]  = {COL_SIZE, 1};
     const hsize_t fblock[2]  = {1, 1};
 
-    CHECK_ERROR(H5Sselect_hyperslab(fspace_id, H5S_SELECT_SET,
-                                    fstart, fstride, fcount, fblock));
+    CHECK_ERROR(rankid, H5Sselect_hyperslab(fspace_id, H5S_SELECT_SET,
+                                            fstart, fstride, fcount, fblock));
 
 
     /* Select the hyperslab in memory which should be written by the current MPI
@@ -129,8 +144,8 @@ int main(int argc, char **argv) {
     const hsize_t mcount  = COL_SIZE;
     const hsize_t mblock  = 1;
 
-    CHECK_ERROR(H5Sselect_hyperslab(mspace_id, H5S_SELECT_SET,
-                                   &mstart, &mstride, &mcount, &mblock));
+    CHECK_ERROR(rankid, H5Sselect_hyperslab(mspace_id, H5S_SELECT_SET,
+                                           &mstart, &mstride, &mcount, &mblock));
 
 
     /* Create a dataset creation property list. If desired, make the dataset
@@ -143,13 +158,13 @@ int main(int argc, char **argv) {
 
     static_assert(CHUNKED or not CHUNKED);
     #if (CHUNKED)
-    INFO("Chunking enabled");
-    CHECK_ERROR(H5Pset_layout(dcpl_id, H5D_CHUNKED));
+    INFO(rankid, "Chunking enabled");
+    CHECK_ERROR(rankid, H5Pset_layout(dcpl_id, H5D_CHUNKED));
     const hsize_t chunk_dims[2] = {COL_SIZE, 1};  // Same as to fcount above
-    CHECK_ERROR(H5Pset_chunk(dcpl_id, 2, chunk_dims));
+    CHECK_ERROR(rankid, H5Pset_chunk(dcpl_id, 2, chunk_dims));
     #else
     INFO("Chunking disabled");
-    CHECK_ERROR(H5Pset_layout(dcpl_id, H5D_CONTIGUOUS));
+    CHECK_ERROR(rankid, H5Pset_layout(dcpl_id, H5D_CONTIGUOUS));
     #endif
 
 
@@ -160,10 +175,10 @@ int main(int argc, char **argv) {
     #if (COMPRESS)
     static_assert(CHUNKED);  // Can't compress non-chunked datasets!
     static_assert(COMPRESSION_LEVEL >= 0 and COMPRESSION_LEVEL < 10);
-    CHECK_ERROR(H5Pset_deflate(dcpl_id, COMPRESSION_LEVEL));
-    INFO("Compression enabled with compression level " << COMPRESSION_LEVEL);
+    CHECK_ERROR(rankid, H5Pset_deflate(dcpl_id, COMPRESSION_LEVEL));
+    INFO(rankid, "Compression enabled with compression level " << COMPRESSION_LEVEL);
     #else
-    INFO("Compression disabled");
+    INFO(rankid, "Compression disabled");
     #endif
 
 
@@ -180,7 +195,7 @@ int main(int argc, char **argv) {
     // Create a collective dataset transfer property list
     const auto dxpl_id = H5Pcreate(H5P_DATASET_XFER);
     assert(dxpl_id >= 0);
-    CHECK_ERROR(H5Pset_dxpl_mpio(dxpl_id, H5FD_MPIO_COLLECTIVE));
+    CHECK_ERROR(rankid, H5Pset_dxpl_mpio(dxpl_id, H5FD_MPIO_COLLECTIVE));
 
 
     // Generate and write some data to the dataset
@@ -190,20 +205,19 @@ int main(int argc, char **argv) {
         data.at(i) = rankid + i;
     }
 
-    CHECK_ERROR(H5Dwrite(dset_create_id, H5T_NATIVE_INT, mspace_id, fspace_id,
-                         dxpl_id, data.data()));
+    CHECK_ERROR(rankid, H5Dwrite(dset_create_id, H5T_NATIVE_INT, mspace_id, fspace_id,
+                                 dxpl_id, data.data()));
 
-    CHECK_ERROR(H5Dclose(dset_create_id));
-    CHECK_ERROR(H5Sclose(mspace_id));
-    CHECK_ERROR(H5Sclose(fspace_id));
-    CHECK_ERROR(H5Fclose(file_create_id));
+    CHECK_ERROR(rankid, H5Dclose(dset_create_id));
+    CHECK_ERROR(rankid, H5Sclose(mspace_id));
+    CHECK_ERROR(rankid, H5Sclose(fspace_id));
+    CHECK_ERROR(rankid, H5Fclose(file_create_id));
 
 
     // Check that the writing was really parallel
-    io_check(dxpl_id, "Writing dataset");
+    io_check(dxpl_id, "Writing dataset", rankid);
 
-    // Print some info
-    INFO("Dataset successfully written to disk");
+    INFO(rankid, "Dataset successfully written to disk");
 
 
 
@@ -216,9 +230,10 @@ int main(int argc, char **argv) {
     assert(file_id_open >= 0);
 
     // Open the dataset *INDEPENDENTLY* of all other MPI ranks (-> H5P_DEFAULT)
-    const auto dset_read_id = H5Dopen(file_id_open, DSETNAME, H5P_DEFAULT);
-    assert(dset_read_id >= 0);
+    hid_t dset_read_id;
 
+    dset_read_id = H5Dopen(file_id_open, DSETNAME, H5P_DEFAULT);
+    assert(dset_read_id >= 0);
 
     // Retrieve the dimensionality of the dataset and the number of elements in it
     const auto dspace_id = H5Dget_space(dset_read_id);
@@ -231,19 +246,20 @@ int main(int argc, char **argv) {
     const auto ndims_again = H5Sget_simple_extent_dims(dspace_id, dims, nullptr);
     assert(ndims_again == 2);
 
-    INFO("Dataset dimensions from reading: " << dims[0] << "*" << dims[1]);
-    CHECK_ERROR(H5Sclose(dspace_id));
-
+    INFO(rankid, "Dataset dimensions from reading: " << dims[0] << "*" << dims[1]);
+    CHECK_ERROR(rankid, H5Sclose(dspace_id));
 
     // Read the dataset into a buffer in parallel
     int *buffer = new int[dims[0]*dims[1]];
-    CHECK_ERROR(H5Dread(dset_read_id, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, dxpl_id, buffer));
-    CHECK_ERROR(H5Dclose(dset_read_id));
-    CHECK_ERROR(H5Pclose(fapl_id));
-    CHECK_ERROR(H5Fclose(file_id_open));
+    CHECK_ERROR(rankid, H5Dread(dset_read_id, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, dxpl_id, buffer));
+    CHECK_ERROR(rankid, H5Dclose(dset_read_id));
+
+    CHECK_ERROR(rankid, H5Pclose(fapl_id));
+    CHECK_ERROR(rankid, H5Fclose(file_id_open));
 
     // Check that the reading was really parallel
-    io_check(dxpl_id, "Reading dataset");
+    io_check(dxpl_id, "Reading dataset", rankid);
+    CHECK_ERROR(rankid, H5Pclose(dxpl_id));
 
 
     // Print the dataset to screen
@@ -260,16 +276,13 @@ int main(int argc, char **argv) {
 
     delete [] buffer;
     buffer = nullptr;
-    CHECK_ERROR(H5Pclose(dxpl_id));
 
 
-    // Record the final time and measure execution time
     const auto end      = high_resolution_clock::now();
     const auto duration = duration_cast<milliseconds>(end - begin);
-    INFO("Execution time: " << duration.count() << " ms");
+    INFO(rankid, "Execution time: " << duration.count() << " ms");
 
-    // Finalize MPI
-    CHECK_ERROR(MPI_Finalize());
+    CHECK_ERROR(rankid, MPI_Finalize());
     
     return 0;
 }

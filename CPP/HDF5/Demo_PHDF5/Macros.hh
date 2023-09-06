@@ -7,60 +7,51 @@
 
 
 // Macro printing an informative message
-#define INFO(msg_ss)                                         \
-    do {                                                     \
-        int proc_ID;                                         \
-        MPI_Comm_rank(MPI_COMM_WORLD, &proc_ID);             \
-                                                             \
-        if (proc_ID == 0) {                                  \
-            std::ostringstream ss;                           \
-            ss << msg_ss;                                    \
-            std::cout << "INFO: " << ss.str() << std::endl;  \
-        }                                                    \
-    }  while(0)
+#define INFO(rankid, msg_ss)                     \
+    do {                                         \
+        std::ostringstream ss;                   \
+        ss << "INFO (rank " << rankid << "): "   \
+           << msg_ss << endl;                    \
+                                                 \
+        fprintf(stdout, ss.str().c_str());       \
+        fflush(stdout);                          \
+    } while(0)
 
 
 // Macro printing a warning message
-#define WARNING(msg_ss)                                         \
-    do {                                                        \
-        int proc_ID;                                            \
-        MPI_Comm_rank(MPI_COMM_WORLD, &proc_ID);                \
-                                                                \
-        if (proc_ID == 0) {                                     \
-            std::ostringstream ss;                              \
-            ss << msg_ss;                                       \
-            std::cout << "WARNING: " << ss.str() << std::endl;  \
-        }                                                       \
-    }  while(0)
+#define WARNING(rankid, msg_ss)                    \
+    do {                                           \
+        std::ostringstream ss;                     \
+        ss << "WARNING (rank " << rankid << "): "  \
+           << msg_ss << endl;                      \
+                                                   \
+        fprintf(stderr, ss.str().c_str());         \
+        fflush(stderr);                            \
+    } while(0)
 
 
-// Macro printing an error message and terminating program execution
-#define ERROR(msg_ss)                                               \
-    do {                                                            \
-        int proc_ID;                                                \
-        MPI_Comm_rank(MPI_COMM_WORLD, &proc_ID);                    \
-                                                                    \
-        if (proc_ID == 0) {                                         \
-            std::ostringstream ss;                                  \
-            ss << msg_ss;                                           \
-            std::cerr << "ERROR (file " << __FILE__                 \
-                      << ", line " << __LINE__ << ")" << std::endl  \
-                      << "  -> " << ss.str() << std::endl;          \
-        }                                                           \
-                                                                    \
-        MPI_Barrier(MPI_COMM_WORLD);                                \
-        MPI_Abort(MPI_COMM_WORLD, MPI_ERR_INTERN);                  \
-    }  while(0)
+// Macro printing an error message and aborting program execution
+#define ERROR(rankid, msg_ss)                                  \
+    do {                                                       \
+        std::ostringstream ss;                                 \
+        ss << "ERROR (rank " << rankid                         \
+           << ", file " << __FILE__ << ", line " << __LINE__   \
+           << endl << "  -> " << msg_ss << endl;               \
+                                                               \
+        fprintf(stderr, ss.str().c_str());                     \
+        fflush(stderr);                                        \
+        MPI_Abort(MPI_COMM_WORLD, MPI_ERR_INTERN);             \
+    } while(0)
 
 
-// Macro checking for errors coming from a routine
-#define CHECK_ERROR(routine)                     \
-do {                                             \
-    const int err = routine;                     \
-    if (err < 0) {                               \
-        ERROR("Routine '" << #routine <<         \
-              "' returned error code " << err);  \
-    }                                            \
+// Macro checking for errors coming from routines returning error codes
+#define CHECK_ERROR(rankid, routine)              \
+do {                                              \
+    const int err = routine;                      \
+    if (err < 0) {                                \
+        ERROR(rankid, "Routine '" << #routine <<  \
+              "' returned error code " << err);   \
+    }                                             \
 } while (0)
 
 
