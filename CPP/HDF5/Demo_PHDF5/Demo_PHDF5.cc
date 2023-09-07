@@ -230,9 +230,8 @@ int main(int argc, char **argv) {
     assert(file_id_open >= 0);
 
     // Open the dataset *INDEPENDENTLY* of all other MPI ranks (-> H5P_DEFAULT)
-    hid_t dset_read_id;
-
-    dset_read_id = H5Dopen(file_id_open, DSETNAME, H5P_DEFAULT);
+    //if (rankid == 0) {  // ***** UNCOMMENT THIS TO SHOW THAT H5Dopen MUST BE CALLED BY ALL MPI RANKS THAT OPENED THE FILE *****
+    const auto dset_read_id = H5Dopen(file_id_open, DSETNAME, H5P_DEFAULT);
     assert(dset_read_id >= 0);
 
     // Retrieve the dimensionality of the dataset and the number of elements in it
@@ -276,7 +275,7 @@ int main(int argc, char **argv) {
 
     delete [] buffer;
     buffer = nullptr;
-
+    //}  // ***** UNCOMMENT THIS TO SHOW THAT H5Dopen MUST BE CALLED BY ALL MPI RANKS THAT OPENED THE FILE *****
 
     const auto end      = high_resolution_clock::now();
     const auto duration = duration_cast<milliseconds>(end - begin);
