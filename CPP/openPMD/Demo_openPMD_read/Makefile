@@ -26,16 +26,16 @@ endif
 
 
 # Objects to be built
-OBJ = Demo_openPMD.o
-EXE = Demo_openPMD_exe
+OBJ = Demo_openPMD_read.o
+EXE = Demo_openPMD_read_exe
 
 
 # Build all targets
 build: ${OBJ}
 	${CXX} ${CXXFLAGS} ${CXX_OPTIMIZE_FLAGS} ${CXX_WARN_FLAGS} ${CXX_DEBUG_FLAGS} ${LDFLAGS} -I${OPENPMD_INC_DIR} -L${OPENPMD_LIBS_DIR} ${OPENPMD_LIBS} -o ${EXE} ${OBJ}
 
-Demo_openPMD.o: Demo_openPMD.cc
-	${CXX} ${CXXFLAGS} ${CXX_OPTIMIZE_FLAGS} ${CXX_WARN_FLAGS} ${CXX_DEBUG_FLAGS} -I${OPENPMD_INC_DIR} -c Demo_openPMD.cc
+Demo_openPMD_read.o: Demo_openPMD_read.cc
+	${CXX} ${CXXFLAGS} ${CXX_OPTIMIZE_FLAGS} ${CXX_WARN_FLAGS} ${CXX_DEBUG_FLAGS} -I${OPENPMD_INC_DIR} -c Demo_openPMD_read.cc
 
 
 # Remove the executable and all object files
