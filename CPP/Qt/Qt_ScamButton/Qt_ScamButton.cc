@@ -6,7 +6,8 @@
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QMessageBox>
 
-#define IMG_SIZE 128
+#define FONT_SIZE 20.
+#define  IMG_SIZE 128
 
 using namespace std;
 
@@ -20,6 +21,7 @@ int main(int argc, char **argv) {
     button.setToolTip("Click!");
 
     QFont font("Monospace");
+    font.setPointSize(FONT_SIZE);
     button.setFont(font);
 
     QIcon icon("../MickeyMouse.svg");
