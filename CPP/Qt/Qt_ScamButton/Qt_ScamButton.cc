@@ -26,14 +26,14 @@
 
 /* The progress bar timer fires every so milliseconds
  * NOTE: must be INTEGER to avoid floats in the following preprocessor expression */
-#define PROG_TIMESTEP_MS 400
+#define PROG_TIMESTEP_MS 20
 #if (PROG_TIMESTEP_MS <= 0)
 #error "Progress bar timer firing timestep must be positive"
 #endif
 
 /* Progress percent step (must lie in (0,100])
  * NOTE: must be INTEGER to avoid floats in the following preprocessor expression */
-#define PROG_PERCENT_STEP 10
+#define PROG_PERCENT_STEP 1
 
 #if (PROG_PERCENT_STEP <= 0 || PROG_PERCENT_STEP > 100)
 #error "Progress bar percent step must lie in (0,100]"
@@ -74,7 +74,7 @@ int main(int argc, char **argv) {
     font.setPointSize(FONT_SIZE);
     button.setFont(font);
 
-    QIcon icon("../MickeyMouse.svg");
+    QIcon icon("MickeyMouse.svg");
     //button.setIcon(QIcon::fromTheme("face-smile"));
     button.setIcon(icon);
     button.setIconSize(QSize(IMG_SIZE, IMG_SIZE));
