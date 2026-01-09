@@ -11,7 +11,7 @@ set(EXE "Qt_QTableWidget")
 find_package(Qt6 REQUIRED COMPONENTS Widgets)
 qt_standard_project_setup()  # This magically provides all the needed Qt libraries and headers
 
-qt_add_executable(${EXE} Qt_TableWidget.cc)
+qt_add_executable(${EXE} Qt_QTableWidget.cc)
 
 target_link_libraries(${EXE} PRIVATE Qt6::Widgets)
 
