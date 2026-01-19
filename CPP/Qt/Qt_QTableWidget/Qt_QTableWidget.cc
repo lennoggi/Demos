@@ -1,8 +1,6 @@
 /* =========================================
  * A QtWidgets app showing an editable table
  * ========================================= */
-#include <string>
-
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QTableWidget>
 #include <QtWidgets/QTableWidgetItem>
@@ -14,6 +12,10 @@ using namespace std;
 // Number of rows and columns in the table
 #define NROWS 10
 #define NCOLS 20
+
+/* Filling policy
+ * NOTE: anchor the regex via ^[...]$ */
+#define REGEX_POLICY "^[a-zA-Z0-9-_]+$"
 
 // Other table parameters
 #define TITLE "A simple QWidgetTable"
@@ -56,6 +58,17 @@ int main(int argc, char **argv) {
             table.setItem(i, j, new QTableWidgetItem(QString::number(i*NCOLS + j)));
         }
     }
+
+
+    /* Check that the user's input complies with a given policy (only some
+     * characters are accepted)                                                 */
+    QObject::connect(&table, &QTableWidget::itemChanged, &table, [&table](){  // Validates after editing is done
+        QRegularExpression regex(REGEX_POLICY);
+
+        if (not regex.match(table.currentItem()->text()).hasMatch()) {
+            table.currentItem()->setBackground(Qt::red);
+        }
+    });
 
     table.show();
     return app.exec();
