@@ -37,9 +37,7 @@ class BaseTableModel : public QAbstractTableModel {
         bool removeRows(int row,
                         int count,
                         const QModelIndex &parent = QModelIndex()) override;
-
         void addRow();
-        //void removeRow();
 
     protected:
         virtual QStringList columnHeaders() const;

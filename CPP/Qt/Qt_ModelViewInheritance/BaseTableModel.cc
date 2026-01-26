@@ -115,11 +115,6 @@ void BaseTableModel::addRow() {
     return;
 }
 
-//void BaseTableModel::removeRow() {
-//    this->removeRows(this->rowCount(), 1, QModelIndex());
-//    return;
-//}
-
 
 QStringList BaseTableModel::columnHeaders() const {
     return QStringList{ "Base A", "Base B" };

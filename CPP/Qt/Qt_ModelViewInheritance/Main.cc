@@ -7,6 +7,7 @@
 #include <QWidget>
 #include <QTableView>
 #include <QVBoxLayout>
+#include <QHBoxLayout>
 #include <QComboBox>
 #include <QPushButton>
 
@@ -15,8 +16,6 @@
 
 #define WINDOW_WIDTH  600
 #define WINDOW_HEIGHT 300
-
-#define ADD_ROW_BUTTON_MAX_WIDTH 100
 
 
 int main(int argc, char **argv) {
@@ -33,28 +32,45 @@ int main(int argc, char **argv) {
     });
 
     auto *add_row_button = new QPushButton("New row", &window);
-    add_row_button->setMaximumWidth(ADD_ROW_BUTTON_MAX_WIDTH);
-    add_row_button->setStyleSheet(
-        "QPushButton {\
-           background-color: darkGreen;\
-           color: white;\
-           border-radius: 3px;\
-         }\
-         QPushButton:hover {\
-           background-color: green;\
-         }\
-         QPushButton:pressed {\
-           font-weight: bold;\
-         }"\
-    );
+    add_row_button->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+//    add_row_button->setStyleSheet(
+//        "QPushButton {\
+//           background-color: darkGreen;\
+//           color: white;\
+//           border-radius: 3px;\
+//           left-padding: 12px;\
+//           right-padding: 12px;\
+//         }\
+//         QPushButton:hover {\
+//           background-color: green;\
+//         }\
+//         QPushButton:pressed {\
+//           font-weight: bold;\
+//         }"\
+//    );
+
+    auto *remove_rows_button = new QPushButton("Remove selected rows", &window);
+    remove_rows_button->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    remove_rows_button->setEnabled(false);
 
     auto *view = new QTableView(&window);
     //view->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    view->setAlternatingRowColors(true);
+    view->setStyleSheet(
+        "QTableView {\
+           alternate-background-color: darkGray;\
+        }"
+    );
 
-    auto *controls = new QVBoxLayout(&window);
-    controls->addWidget(menu);
-    controls->addWidget(add_row_button);
-    controls->addWidget(view);
+    auto *buttons_layout = new QHBoxLayout();
+    buttons_layout->addStretch();  // Fit to width and push to the right
+    buttons_layout->addWidget(add_row_button);
+    buttons_layout->addWidget(remove_rows_button);
+
+    auto *window_layout = new QVBoxLayout(&window);
+    window_layout->addWidget(menu);
+    window_layout->addLayout(buttons_layout);
+    window_layout->addWidget(view);
 
 
     // Start with a basic table
@@ -95,7 +111,8 @@ int main(int argc, char **argv) {
         }
     );
 
-    // Add row when button is clicked
+
+    // Add row when button is clicked before any rows are added
     QObject::connect(add_row_button, &QPushButton::clicked, model, &BaseTableModel::addRow);
 
     window.show();
