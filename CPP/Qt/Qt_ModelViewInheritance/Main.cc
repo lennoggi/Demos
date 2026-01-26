@@ -6,11 +6,17 @@
 #include <QApplication>
 #include <QWidget>
 #include <QTableView>
-#include <QComboBox>
 #include <QVBoxLayout>
+#include <QComboBox>
+#include <QPushButton>
 
 #include "include/BaseTableModel.hh"
 #include "include/FancyTableModel.hh"
+
+#define WINDOW_WIDTH  600
+#define WINDOW_HEIGHT 300
+
+#define ADD_ROW_BUTTON_MAX_WIDTH 100
 
 
 int main(int argc, char **argv) {
@@ -26,11 +32,28 @@ int main(int argc, char **argv) {
         "Fancy table type 2"
     });
 
-    auto *controls = new QVBoxLayout(&window);
-    controls->addWidget(menu);
+    auto *add_row_button = new QPushButton("New row", &window);
+    add_row_button->setMaximumWidth(ADD_ROW_BUTTON_MAX_WIDTH);
+    add_row_button->setStyleSheet(
+        "QPushButton {\
+           background-color: darkGreen;\
+           color: white;\
+           border-radius: 3px;\
+         }\
+         QPushButton:hover {\
+           background-color: green;\
+         }\
+         QPushButton:pressed {\
+           font-weight: bold;\
+         }"\
+    );
 
     auto *view = new QTableView(&window);
     //view->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+
+    auto *controls = new QVBoxLayout(&window);
+    controls->addWidget(menu);
+    controls->addWidget(add_row_button);
     controls->addWidget(view);
 
 
@@ -38,6 +61,7 @@ int main(int argc, char **argv) {
     BaseTableModel *model = new BaseTableModel();
     view->setModel(model);
 
+    // Select table model from drop-down menu
     QObject::connect(
         menu,                                                 // Signal sender
         QOverload<int>::of(&QComboBox::currentIndexChanged),  // Signal type
@@ -63,13 +87,19 @@ int main(int argc, char **argv) {
                     break;
             }
 
+            // Need to reconnect the button click when changing the table model
+            QObject::disconnect(add_row_button, nullptr, nullptr, nullptr);
+            QObject::connect(add_row_button, &QPushButton::clicked, model, &BaseTableModel::addRow);
+
             view->setModel(model);
         }
     );
 
+    // Add row when button is clicked
+    QObject::connect(add_row_button, &QPushButton::clicked, model, &BaseTableModel::addRow);
 
     window.show();
-    window.resize(800, 400);
+    window.resize(WINDOW_WIDTH, WINDOW_HEIGHT);
 
     return app.exec();
 }

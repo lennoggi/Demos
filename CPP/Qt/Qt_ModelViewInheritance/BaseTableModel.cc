@@ -61,6 +61,66 @@ Qt::ItemFlags BaseTableModel::flags(const QModelIndex &index) const {
 }
 
 
+bool BaseTableModel::insertRows(int row,
+                                int count,
+                                const QModelIndex &parent) {
+    Q_UNUSED(parent);
+    const auto old_row_count = (this->rowCount());
+
+    if (row >= 0 and count > 0) {
+        // Clamp row insertion to valid range
+        if (row > old_row_count) {
+            row = old_row_count;
+        }
+
+        beginInsertRows(QModelIndex(), row, row + count - 1);
+
+        for (int i = 0; i < count; ++i) {
+            (this->Rows).insert(row + i, QStringList((this->columnCount()), QString()));
+        }
+
+        endInsertRows();
+        return true;
+    } else {
+        return false;
+    }
+}
+
+
+bool BaseTableModel::removeRows(int row,
+                                int count,
+                                const QModelIndex &parent) {
+    Q_UNUSED(parent);
+    const auto old_row_count = (this->rowCount());
+
+    if (row > 0 and row < old_row_count and count > 0) {
+        // Clamp row removal to valid range
+        if (row + count > old_row_count) {
+            count = old_row_count - row;
+        }
+
+        beginRemoveRows(QModelIndex(), row, row + count - 1);
+        (this->Rows).remove(row, count);
+        //(this->Rows).squeeze();  // TODO: expensive, but do this if (this->Rows).capacity() "largely" exceeds  (this->rowCount())
+        endRemoveRows();
+        return true;
+    } else {
+        return false;
+    }
+}
+
+
+void BaseTableModel::addRow() {
+    this->insertRows(this->rowCount(), 1, QModelIndex());
+    return;
+}
+
+//void BaseTableModel::removeRow() {
+//    this->removeRows(this->rowCount(), 1, QModelIndex());
+//    return;
+//}
+
+
 QStringList BaseTableModel::columnHeaders() const {
     return QStringList{ "Base A", "Base B" };
 }

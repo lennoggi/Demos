@@ -30,6 +30,17 @@ class BaseTableModel : public QAbstractTableModel {
 
         Qt::ItemFlags flags(const QModelIndex &index) const override;
 
+        bool insertRows(int row,
+                        int count,
+                        const QModelIndex &parent = QModelIndex()) override;
+
+        bool removeRows(int row,
+                        int count,
+                        const QModelIndex &parent = QModelIndex()) override;
+
+        void addRow();
+        //void removeRow();
+
     protected:
         virtual QStringList columnHeaders() const;
         QVector<QStringList> Rows;
