@@ -25,7 +25,7 @@ constexpr inline int    CONE_NEDGES = 20;
 #define BACKGROUND_COLOR "MidnightBlue"
 
 #define WINDOW_WIDTH  1000
-#define WINDOW_HEIGHT 1000
+#define WINDOW_HEIGHT 500
 #define WINDOW_TITLE "VTK cone example"
 
 constexpr inline int NTURNS = 10;
@@ -54,36 +54,50 @@ int main(int argc, char **argv) {
     auto colors = vtkNamedColors::New();
     actor->GetProperty()->SetColor(colors->GetColor3d(CONE_COLOR).GetData());
 
-    // Create a renderer and assign the actor to it
-    auto renderer = vtkRenderer::New();
-    renderer->AddActor(actor);
-    renderer->SetBackground(colors->GetColor3d(BACKGROUND_COLOR).GetData());
+
+    /* Create two separate renderers and assign the actors and a viewport to
+     * each of them                                                             */
+    auto renderer1 = vtkRenderer::New();
+    renderer1->AddActor(actor);
+    renderer1->SetBackground(colors->GetColor3d(BACKGROUND_COLOR).GetData());
+    renderer1->SetViewport(0.0, 0.0, 0.5, 1.0);  // xmin, xmax, ymin, ymax
+
+    auto renderer2 = vtkRenderer::New();
+    renderer2->AddActor(actor);
+    renderer2->SetBackground(colors->GetColor3d(BACKGROUND_COLOR).GetData());
+    renderer2->SetViewport(0.5, 0.0, 1.0, 1.0);  // xmin, xmax, ymin, ymax
+
 
     // Create the render window and assign the renderer to it
     auto renderwin = vtkRenderWindow::New();
-    renderwin->AddRenderer(renderer);
+    renderwin->AddRenderer(renderer1);
+    renderwin->AddRenderer(renderer2);
     renderwin->SetSize(WINDOW_WIDTH, WINDOW_HEIGHT);
     renderwin->SetWindowName(WINDOW_TITLE);
 
     /* Add an observer (i.e., something that catches signals thrown by some VTK
-     * entity) to the renderer                                                  */
+     * entity) to one of the renderers                                          */
     auto callback = Commands::vtkPrintCameraCoords::New();
-    renderer->AddObserver(vtkCommand::StartEvent, callback);
+    renderer1->AddObserver(vtkCommand::StartEvent, callback);
 
 
     // Display the window and rotate the camera all around the scene
     for (int i = 0; i < NTURNS*360; ++i) {
         renderwin->Render();
-        renderer->GetActiveCamera()->Azimuth(1.0);
-        renderer->GetActiveCamera()->Elevation(1.0);
-        renderer->GetActiveCamera()->OrthogonalizeViewUp();
+        renderer1->GetActiveCamera()->Azimuth(1.0);
+        renderer1->GetActiveCamera()->Elevation(1.0);
+        renderer1->GetActiveCamera()->OrthogonalizeViewUp();
+        renderer2->GetActiveCamera()->Azimuth(-1.0);
+        renderer2->GetActiveCamera()->Elevation(-1.0);
+        renderer2->GetActiveCamera()->OrthogonalizeViewUp();
     }
 
 
     // Clean up
     callback  -> Delete();
     renderwin -> Delete();
-    renderer  -> Delete();
+    renderer1 -> Delete();
+    renderer2 -> Delete();
     colors    -> Delete();
     actor     -> Delete();
     mapper    -> Delete();
