@@ -2,8 +2,9 @@ cmake_minimum_required(VERSION 3.16)
 
 # ***** User-defined variables *****
 set(PROJ "VTK_cone")
-set(SRC Main.cc)
+set(SRC Main.cc vtkPrintCameraCoords.cc)
 set(EXE ${PROJ})
+set(INC "include")
 # *********************************
 
 project(${PROJ} VERSION 1.0.0.0 LANGUAGES CXX)
@@ -12,7 +13,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 
-find_package(VTK COMPONENTS
+find_package(VTK REQUIRED COMPONENTS
     CommonCore
     FiltersSources
     RenderingCore
@@ -23,6 +24,7 @@ find_package(VTK COMPONENTS
 )
 
 add_executable(${EXE} ${SRC})
+target_include_directories(${EXE} PRIVATE ${INC})
 
 # ${VTK_LIBRARIES} is defined automatically by VTK
 target_link_libraries(${EXE} PRIVATE ${VTK_LIBRARIES})
