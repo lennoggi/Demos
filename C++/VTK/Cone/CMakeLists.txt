@@ -7,7 +7,9 @@ set(EXE ${PROJ})
 set(INC "include")
 # *********************************
 
-project(${PROJ} VERSION 1.0.0.0 LANGUAGES CXX)
+# NOTE: enable C language so that MPI_C is found. MPI is needed if VTK was built
+#       with MPI support.
+project(${PROJ} VERSION 1.0.0.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -18,6 +20,7 @@ find_package(VTK REQUIRED COMPONENTS
     FiltersSources
     RenderingCore
     CommonColor
+    InteractionStyle
     # Needed to display the window on the screen
     RenderingFreeType
     RenderingOpenGL2

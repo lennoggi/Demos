@@ -10,6 +10,9 @@
 #include <vtkRenderer.h>
 #include <vtkRenderWindow.h>
 #include <vtkCamera.h>
+#include "vtkRenderWindowInteractor.h"
+//#include "vtkInteractorStyleTrackballCamera.h"
+#include "vtkInteractorStyleJoystickCamera.h"
 
 #include "vtkPrintCameraCoords.hh"
 
@@ -75,33 +78,48 @@ int main(int argc, char **argv) {
     renderwin->SetSize(WINDOW_WIDTH, WINDOW_HEIGHT);
     renderwin->SetWindowName(WINDOW_TITLE);
 
-    /* Add an observer (i.e., something that catches signals thrown by some VTK
-     * entity) to one of the renderers                                          */
-    auto callback = Commands::vtkPrintCameraCoords::New();
-    renderer1->AddObserver(vtkCommand::StartEvent, callback);
+    /* Add an observer to one of the renderers that watches for the
+     * vtkCommand::StartEvent and calls a custom callback function which prints
+     * the camera coordinates                                                   */
+    //auto callback = Commands::vtkPrintCameraCoords::New();
+    //renderer1->AddObserver(vtkCommand::StartEvent, callback);
 
 
     // Display the window and rotate the camera all around the scene
-    for (int i = 0; i < NTURNS*360; ++i) {
-        renderwin->Render();
-        renderer1->GetActiveCamera()->Azimuth(1.0);
-        renderer1->GetActiveCamera()->Elevation(1.0);
-        renderer1->GetActiveCamera()->OrthogonalizeViewUp();
-        renderer2->GetActiveCamera()->Azimuth(-1.0);
-        renderer2->GetActiveCamera()->Elevation(-1.0);
-        renderer2->GetActiveCamera()->OrthogonalizeViewUp();
-    }
+    //for (int i = 0; i < NTURNS*360; ++i) {
+    //    renderwin->Render();
+    //    renderer1->GetActiveCamera()->Azimuth(1.0);
+    //    renderer1->GetActiveCamera()->Elevation(1.0);
+    //    renderer1->GetActiveCamera()->OrthogonalizeViewUp();
+    //    renderer2->GetActiveCamera()->Azimuth(-1.0);
+    //    renderer2->GetActiveCamera()->Elevation(-1.0);
+    //    renderer2->GetActiveCamera()->OrthogonalizeViewUp();
+    //}
+
+    /* Watch for events in the vtkRenderWindow and enable an interaction with it
+     * with a custom style. Press "e" to exit the event loop (started by
+     * interactor->Start()).                                                    */
+    auto interactor = vtkRenderWindowInteractor::New();
+    interactor->SetRenderWindow(renderwin);
+
+    //auto istyle = vtkInteractorStyleTrackballCamera::New();
+    auto istyle = vtkInteractorStyleJoystickCamera::New();
+
+    interactor->Initialize();
+    interactor->Start();
 
 
     // Clean up
-    callback  -> Delete();
-    renderwin -> Delete();
-    renderer1 -> Delete();
-    renderer2 -> Delete();
-    colors    -> Delete();
-    actor     -> Delete();
-    mapper    -> Delete();
-    cone      -> Delete();
+    istyle     -> Delete();
+    //interactor -> Delete();
+    //callback  -> Delete();
+    renderwin  -> Delete();
+    renderer1  -> Delete();
+    renderer2  -> Delete();
+    colors     -> Delete();
+    actor      -> Delete();
+    mapper     -> Delete();
+    cone       -> Delete();
 
     return 0;
 }
