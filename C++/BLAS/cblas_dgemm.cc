@@ -13,6 +13,9 @@ using namespace std;
 
 
 int main() {
+    /* ---------------
+     * Print some info
+     * --------------- */
     const auto openblas_parallel_mode = openblas_get_parallel();
 
     if (openblas_parallel_mode == 0) {
@@ -30,6 +33,10 @@ int main() {
     cout << "Core architecture:      " << openblas_get_corename()    << endl;
     cout << "Number of threads:      " << openblas_get_num_threads() << endl;
 
+
+    /* -------------------
+     * Set up the matrices
+     * ------------------- */
     constexpr size_t m = M;
     constexpr size_t n = N;
     constexpr size_t p = P;
@@ -39,11 +46,6 @@ int main() {
          << "Matrix B    dimensions: " << p << " * " << n << endl
          << "Matrix C=AB dimensions: " << m << " * " << n << endl
          << endl;
-
-    // "Leading dimensions" = Number of columns
-    constexpr size_t lda = p;
-    constexpr size_t ldb = n;
-    constexpr size_t ldc = n;
 
     constexpr size_t size_a = m*p;
     constexpr size_t size_b = p*n;
@@ -95,9 +97,18 @@ int main() {
     }
 
 
-    // Compute C = alpha*A*B + beta*C (beta = 0  =>  C = alpha*A*B)
+    /* ---------------------------------------------------------------
+     * Compute  C = alpha*A*B + beta*C  with alpha=1 and beta=0, i.e.,
+     *   C = alpha*A*B
+     * --------------------------------------------------------------- */
     constexpr double alpha = 1.0;
     constexpr double beta  = 0.0;
+
+    /* "Leading dimensions" = Number of columns
+     *  CBLAS defaults to row-major layout      */
+    constexpr size_t lda = p;
+    constexpr size_t ldb = n;
+    constexpr size_t ldc = n;
 
     const auto dgemm_begin = chrono::high_resolution_clock::now();
 
