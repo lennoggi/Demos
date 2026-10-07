@@ -3,9 +3,18 @@
 #include <chrono>
 #include <cblas.h>
 
-#define M 800
-#define N 400
-#define P 600
+#define M 49011
+#define N 220
+#define P 150000
+
+/* If OpenBLAS was installed with multithreading support, then:
+ * - OPENBLAS_NTHREADS >  0: force OpenBLAS to use OPENBLAS_NTHREADS threads
+ * - OPENBLAS_NTHREADS <= 0: depending on the particular OpenBLAS version, the
+ *     library may pick the optimal number of threads based on the machine's
+ *     architecture or just use a single thread. Try it out and see.
+ * NOTE: if OpenBLAS was installed without multithreading support, then
+ *       OPENBLAS_NTHREADS has no effect at all                                 */
+#define OPENBLAS_NTHREADS 56
 
 #define PRINT_MATRICES false
 
@@ -13,9 +22,18 @@ using namespace std;
 
 
 int main() {
-    /* ---------------
-     * Print some info
-     * --------------- */
+    /* -----------------------
+     * Sanity checks and setup
+     * ----------------------- */
+    static_assert(M > 0);
+    static_assert(N > 0);
+    static_assert(P > 0);
+    static_assert(PRINT_MATRICES or not PRINT_MATRICES);
+
+    #if OPENBLAS_NTHREADS > 0
+    openblas_set_num_threads(OPENBLAS_NTHREADS);
+    #endif
+
     const auto openblas_parallel_mode = openblas_get_parallel();
 
     if (openblas_parallel_mode == 0) {
@@ -115,6 +133,10 @@ int main() {
     cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
                 m, n, p, alpha, a.data(), lda, b.data(), ldb,
                 beta, c.data(), ldc);
+    // XXX: equivalent to the above
+    //cblas_dgemm(CblasColMajor, CblasNoTrans, CblasNoTrans,
+    //            n, m, p, alpha, b.data(), ldb, a.data(), lda,
+    //            beta, c.data(), ldc);
 
     const auto dgemm_end = chrono::high_resolution_clock::now();
     const chrono::duration<double, std::milli> dgemm_duration = dgemm_end - dgemm_begin;
