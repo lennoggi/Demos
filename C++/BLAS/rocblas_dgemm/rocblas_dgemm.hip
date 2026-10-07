@@ -48,35 +48,13 @@ do {                                                                   \
  * Begin
  * ===== */
 int main() {
-    /* -----------------------
-     * Sanity checks and setup
-     * ----------------------- */
+    /* -------------
+     * Sanity checks
+     * ------------- */
     static_assert(M > 0);
     static_assert(N > 0);
     static_assert(P > 0);
     static_assert(PRINT_MATRICES or not PRINT_MATRICES);
-
-//    #if OPENBLAS_NTHREADS > 0
-//    openblas_set_num_threads(OPENBLAS_NTHREADS);
-//    #endif
-//
-//    const auto openblas_parallel_mode = openblas_get_parallel();
-//
-//    if (openblas_parallel_mode == 0) {
-//        cout << "OpenBLAS parallel mode: single-threaded" << endl;
-//    } else if (openblas_parallel_mode == 1) {
-//        cout << "OpenBLAS parallel mode: pthreads or native OS threads" << endl;
-//    } else if (openblas_parallel_mode == 2) {
-//        cout << "OpenBLAS parallel mode: OpenMP threads" << endl;
-//    } else {
-//        cout << "ERROR: unexpected OpenBLAS parallel mode ("
-//             << openblas_parallel_mode << ")" << endl;
-//    }
-//
-//    cout << "OpenBLAS configuration: " << openblas_get_config()      << endl;
-//    cout << "Core architecture:      " << openblas_get_corename()    << endl;
-//    cout << "Number of threads:      " << openblas_get_num_threads() << endl;
-
 
     /* -------------------------------
      * Set up the matrices on the host
